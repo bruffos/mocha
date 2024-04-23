@@ -1,8 +1,8 @@
 package mocha
 
 import (
-	"bufio"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -125,13 +125,11 @@ func (h *mockHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(res.Status)
 
 	if res.Body != nil {
-		scanner := bufio.NewScanner(res.Body)
-		for scanner.Scan() {
-			w.Write(scanner.Bytes())
-		}
+		b, err := io.ReadAll(res.Body)
+		w.Write(b)
 
-		if scanner.Err() != nil {
-			h.t.Logf("error writing response body: error=%v", scanner.Err())
+		if err != nil {
+			h.t.Logf("error writing response body: error=%v", err)
 		}
 	}
 

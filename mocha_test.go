@@ -6,6 +6,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"path"
 	"testing"
 	"time"
 
@@ -48,6 +50,43 @@ func TestMocha(t *testing.T) {
 	assert.True(t, scoped.Called())
 	assert.Equal(t, 201, res.StatusCode)
 	assert.Equal(t, string(body), "hello world")
+}
+
+func TestMochaBinary(t *testing.T) {
+	m := New(t)
+	m.Start()
+	wd, _ := os.Getwd()
+
+	binaryFile, err := os.ReadFile(path.Join(wd, "reply", "_testdata", "data_binary"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	scoped := m.AddMocks(
+		Get(expect.URLPath("/test")).
+			Header("test", expect.ToEqual("hello")).
+			Query("filter", expect.ToEqual("all")).
+			Reply(reply.
+				Status(200).
+				Header("Content-Type", "image/png").
+				Body(binaryFile)))
+
+	req, _ := http.NewRequest(http.MethodGet, m.URL()+"/test?filter=all", nil)
+	req.Header.Add("test", "hello")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.True(t, scoped.Called())
+	assert.Equal(t, 200, res.StatusCode)
+	assert.Equal(t, binaryFile, body)
 }
 
 func TestMocha_NewBasic(t *testing.T) {
